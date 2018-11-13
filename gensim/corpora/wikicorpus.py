@@ -84,9 +84,11 @@ RE_P17 = re.compile(
     '(^.{0,2}((bgcolor)|(\d{0,1}[ ]?colspan)|(rowspan)|(style=)|(class=)|(align=))(.*))',
     re.UNICODE
 )
+RE_category = "\[\[Category:(\S+)\]\]"
+
 """Table markup"""
 IGNORED_NAMESPACES = [
-    'Wikipedia', 'Category', 'File', 'Portal', 'Template',
+    'Wikipedia', 'File', 'Portal', 'Template',
     'MediaWiki', 'User', 'Help', 'Book', 'Draft', 'WikiProject',
     'Special', 'Talk'
 ]
@@ -487,12 +489,13 @@ def process_article(args, tokenizer_func=tokenize, token_min_len=TOKEN_MIN_LEN,
 
     """
     text, lemmatize, title, pageid = args
+    categories = re.findall(RE_category, text)
     text = filter_wiki(text)
     if lemmatize:
         result = utils.lemmatize(text)
     else:
         result = tokenizer_func(text, token_min_len, token_max_len, lower)
-    return result, title, pageid
+    return result, title, pageid, categories
 
 
 def init_to_ignore_interrupt():
@@ -681,7 +684,7 @@ class WikiCorpus(TextCorpus):
             # process the corpus in smaller chunks of docs, because multiprocessing.Pool
             # is dumb and would load the entire input into RAM at once...
             for group in utils.chunkize(texts, chunksize=10 * self.processes, maxsize=1):
-                for tokens, title, pageid in pool.imap(_process_article, group):
+                for tokens, title, pageid, categories in pool.imap(_process_article, group):
                     articles_all += 1
                     positions_all += len(tokens)
                     # article redirects and short stubs are pruned here
@@ -691,7 +694,7 @@ class WikiCorpus(TextCorpus):
                     articles += 1
                     positions += len(tokens)
                     if self.metadata:
-                        yield (tokens, (pageid, title))
+                        yield (tokens, categories, (pageid, title))
                     else:
                         yield tokens
 
