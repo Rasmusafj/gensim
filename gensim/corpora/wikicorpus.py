@@ -222,7 +222,6 @@ def remove_markup(text, promote_remaining=True, simplify_links=True):
         Whether uncaught markup should be promoted to plain text.
     simplify_links : bool
         Whether links should be simplified keeping only their description text.
-
     Returns
     -------
     str
